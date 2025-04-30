@@ -130,7 +130,7 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
               DropdownButtonFormField<Language>(
                 value: _selectedLanguage,
                 decoration: const InputDecoration(
-                  labelText: 'Selecciona idioma de destino',
+                  labelText: 'Selecciona idioma',
                   border: OutlineInputBorder(),
                 ),
                 items: Language.values.map((lang) {
