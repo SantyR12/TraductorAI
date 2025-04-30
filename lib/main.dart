@@ -24,6 +24,14 @@ class TranslatorApp extends StatelessWidget {
   }
 }
 
+enum Language { english, french, italian }
+
+final Map<Language, String> languageMap = {
+  Language.english: 'inglés',
+  Language.french: 'francés',
+  Language.italian: 'italiano',
+};
+
 class TranslatorScreen extends StatefulWidget {
   const TranslatorScreen({super.key});
 
@@ -33,9 +41,10 @@ class TranslatorScreen extends StatefulWidget {
 
 class _TranslatorScreenState extends State<TranslatorScreen> {
   final TextEditingController _textController = TextEditingController();
-  bool _isLoading = false;
-  String _englishText = '';
   final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
+  String _translatedText = '';
+  Language _selectedLanguage = Language.english;
 
   Future<String> translateText(String textValue) async {
     setState(() {
@@ -43,26 +52,21 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
     });
 
     try {
-      // Obtener la API key desde el archivo .env
       final apiKey = dotenv.env['GEMINI_API_KEY'];
 
       if (apiKey == null || apiKey.isEmpty) {
         throw Exception('API key not found. Please add it to your .env file.');
       }
 
-      // Crear una instancia del modelo de Gemini
       final model = GenerativeModel(
         model: 'gemini-2.0-flash-lite',
         apiKey: apiKey,
       );
 
-      // Preparar el prompt para la traducción
       final prompt =
-          'Traduce el siguiente texto del español al inglés. Devuelve '
-          'solamente el texto traducido sin incluir explicaciones:'
-          '\n\n$textValue';
+          'Traduce el siguiente texto del español al ${languageMap[_selectedLanguage]}. '
+          'Devuelve solamente el texto traducido sin incluir explicaciones:\n\n$textValue';
 
-      // Realizar la consulta a la API
       final content = [Content.text(prompt)];
       final response = await model.generateContent(content);
 
@@ -82,7 +86,7 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
     if (_formKey.currentState!.validate()) {
       String result = await translateText(_textController.text);
       setState(() {
-        _englishText = result;
+        _translatedText = result;
       });
     }
   }
@@ -107,7 +111,6 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Entrada de texto en español
               TextFormField(
                 controller: _textController,
                 decoration: const InputDecoration(
@@ -124,8 +127,27 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
                 },
               ),
               const SizedBox(height: 16.0),
-
-              // Botón de traducción
+              DropdownButtonFormField<Language>(
+                value: _selectedLanguage,
+                decoration: const InputDecoration(
+                  labelText: 'Selecciona idioma de destino',
+                  border: OutlineInputBorder(),
+                ),
+                items: Language.values.map((lang) {
+                  return DropdownMenuItem<Language>(
+                    value: lang,
+                    child: Text(languageMap[lang]!),
+                  );
+                }).toList(),
+                onChanged: (Language? newLang) {
+                  if (newLang != null) {
+                    setState(() {
+                      _selectedLanguage = newLang;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 16.0),
               ElevatedButton(
                 onPressed: _isLoading ? null : _handleTranslate,
                 child: _isLoading
@@ -133,8 +155,6 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
                     : const Text('Traducir'),
               ),
               const SizedBox(height: 24.0),
-
-              // Sección de texto traducido
               const Text(
                 'Traducción:',
                 style: TextStyle(
@@ -143,7 +163,6 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
                 ),
               ),
               const SizedBox(height: 8.0),
-
               Expanded(
                 child: Container(
                   padding: const EdgeInsets.all(12.0),
@@ -153,12 +172,13 @@ class _TranslatorScreenState extends State<TranslatorScreen> {
                   ),
                   child: SingleChildScrollView(
                     child: Text(
-                      _englishText.isEmpty
+                      _translatedText.isEmpty
                           ? 'La traducción aparecerá aquí'
-                          : _englishText,
+                          : _translatedText,
                       style: TextStyle(
-                        color:
-                            _englishText.isEmpty ? Colors.grey : Colors.black,
+                        color: _translatedText.isEmpty
+                            ? Colors.grey
+                            : Colors.black,
                       ),
                     ),
                   ),
